@@ -1,15 +1,14 @@
 """The Hildebrand Glow integration."""
 import asyncio
+from typing import Any, Dict
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 
-from .glow import Glow
 from .const import DOMAIN
-
-from typing import Any, Dict
+from .glow import Glow
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
@@ -26,7 +25,7 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hildebrand Glow from a config entry."""
 
-    glow = Glow(entry.data['app_id'], entry.data['token'])
+    glow = Glow(entry.data["app_id"], entry.data["token"])
     hass.data[DOMAIN][entry.entry_id] = glow
 
     for component in PLATFORMS:

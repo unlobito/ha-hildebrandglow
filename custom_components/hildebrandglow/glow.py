@@ -1,8 +1,10 @@
-import requests
-from homeassistant import exceptions
 from pprint import pprint
-
 from typing import Any, Dict, List
+
+import requests
+
+from homeassistant import exceptions
+
 
 class Glow:
     """Bindings for the Hildebrand Glow Platform API"""
@@ -14,10 +16,12 @@ class Glow:
         self.token = token
 
     @classmethod
-    async def authenticate(cls, app_id: str, username: str, password: str) -> Dict[str, Any]:
-        url = f'{cls.BASE_URL}/auth'
-        auth = {'username': username, 'password': password}
-        headers = {'applicationId': app_id}
+    async def authenticate(
+        cls, app_id: str, username: str, password: str
+    ) -> Dict[str, Any]:
+        url = f"{cls.BASE_URL}/auth"
+        auth = {"username": username, "password": password}
+        headers = {"applicationId": app_id}
 
         try:
             response = requests.post(url, json=auth, headers=headers)
@@ -26,15 +30,15 @@ class Glow:
 
         data = response.json()
 
-        if data['valid']:
+        if data["valid"]:
             return data
         else:
             pprint(data)
             raise InvalidAuth
 
     async def retrieve_resources(self) -> List[Dict[str, Any]]:
-        url = f'{self.BASE_URL}/resource'
-        headers = {'applicationId': self.app_id, 'token': self.token}
+        url = f"{self.BASE_URL}/resource"
+        headers = {"applicationId": self.app_id, "token": self.token}
 
         try:
             response = requests.get(url, headers=headers)
@@ -48,8 +52,8 @@ class Glow:
         return data
 
     async def current_usage(self, resource: Dict[str, Any]) -> Dict[str, Any]:
-        url = f'{self.BASE_URL}/resource/{resource}/current'
-        headers = {'applicationId': self.app_id, 'token': self.token}
+        url = f"{self.BASE_URL}/resource/{resource}/current"
+        headers = {"applicationId": self.app_id, "token": self.token}
 
         try:
             response = requests.get(url, headers=headers)
@@ -62,8 +66,10 @@ class Glow:
         data = response.json()
         return data
 
+
 class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
+
 
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

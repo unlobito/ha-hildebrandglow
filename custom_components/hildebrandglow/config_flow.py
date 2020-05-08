@@ -1,19 +1,18 @@
 """Config flow for Octopus Energy integration."""
 import logging
+from typing import Any, Dict
 
 import voluptuous as vol
 
-from homeassistant import core, config_entries
+from homeassistant import config_entries, core
 
 from .const import DOMAIN  # pylint:disable=unused-import
-
-from .glow import Glow, CannotConnect, InvalidAuth
-
-from typing import Any, Dict
+from .glow import CannotConnect, Glow, InvalidAuth
 
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema({"app_id": str, "username": str, "password": str})
+
 
 async def validate_input(hass: core.HomeAssistant, data: dict) -> Dict[str, Any]:
     """Validate the user input allows us to connect.
@@ -21,10 +20,17 @@ async def validate_input(hass: core.HomeAssistant, data: dict) -> Dict[str, Any]
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
 
-    glow = await Glow.authenticate(data['app_id'], data['username'], data['password'])
-    
+    glow = await Glow.authenticate(data["app_id"], data["username"], data["password"])
+
     # Return some info we want to store in the config entry.
-    return {"name": glow["name"], "app_id": data['app_id'], "username": data['username'], 'password': data['password'], "token": glow["token"], "token_exp": glow["exp"]}
+    return {
+        "name": glow["name"],
+        "app_id": data["app_id"],
+        "username": data["username"],
+        "password": data["password"],
+        "token": glow["token"],
+        "token_exp": glow["exp"],
+    }
 
 
 class DomainConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
