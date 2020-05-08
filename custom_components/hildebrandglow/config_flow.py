@@ -3,17 +3,19 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant import core, config_entries, exceptions
+from homeassistant import core, config_entries
 
 from .const import DOMAIN  # pylint:disable=unused-import
 
 from .glow import Glow, CannotConnect, InvalidAuth
 
+from typing import Any, Dict
+
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema({"app_id": str, "username": str, "password": str})
 
-async def validate_input(hass: core.HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data: dict) -> Dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -31,11 +33,12 @@ class DomainConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.SOURCE_USER
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: Dict = None) -> Dict[str, Any]:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
             try:
+                assert self.hass is not None
                 info = await validate_input(self.hass, user_input)
 
                 return self.async_create_entry(title=info["name"], data=info)

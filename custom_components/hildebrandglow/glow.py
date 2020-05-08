@@ -2,17 +2,19 @@ import requests
 from homeassistant import exceptions
 from pprint import pprint
 
+from typing import Any, Dict, List
+
 class Glow:
     """Bindings for the Hildebrand Glow Platform API"""
 
     BASE_URL = "https://api.glowmarkt.com/api/v0-1"
 
-    def __init__(self, app_id, token):
+    def __init__(self, app_id: str, token: str):
         self.app_id = app_id
         self.token = token
 
     @classmethod
-    async def authenticate(cls, app_id, username, password):
+    async def authenticate(cls, app_id: str, username: str, password: str) -> Dict[str, Any]:
         url = f'{cls.BASE_URL}/auth'
         auth = {'username': username, 'password': password}
         headers = {'applicationId': app_id}
@@ -30,7 +32,7 @@ class Glow:
             pprint(data)
             raise InvalidAuth
 
-    async def retrieve_resources(self):
+    async def retrieve_resources(self) -> List[Dict[str, Any]]:
         url = f'{self.BASE_URL}/resource'
         headers = {'applicationId': self.app_id, 'token': self.token}
 
@@ -45,7 +47,7 @@ class Glow:
         data = response.json()
         return data
 
-    async def current_usage(self, resource):
+    async def current_usage(self, resource: Dict[str, Any]) -> Dict[str, Any]:
         url = f'{self.BASE_URL}/resource/{resource}/current'
         headers = {'applicationId': self.app_id, 'token': self.token}
 

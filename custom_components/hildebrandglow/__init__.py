@@ -9,19 +9,21 @@ from homeassistant.config_entries import ConfigEntry
 from .glow import Glow
 from .const import DOMAIN
 
+from typing import Any, Dict
+
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
 PLATFORMS = ["sensor"]
 
 
-async def async_setup(hass: HomeAssistant, config: dict):
+async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
     """Set up the Hildebrand Glow component."""
     hass.data[DOMAIN] = {}
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hildebrand Glow from a config entry."""
 
     glow = Glow(entry.data['app_id'], entry.data['token'])
@@ -35,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = all(
         await asyncio.gather(

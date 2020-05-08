@@ -1,10 +1,15 @@
 """Platform for sensor integration."""
+from homeassistant.core import HomeAssistant
 from homeassistant.const import POWER_WATT, DEVICE_CLASS_POWER
 from homeassistant.helpers.entity import Entity
 
+from typing import Any, Callable, Dict, Optional
+
 from .const import DOMAIN
 
-async def async_setup_entry(hass, config, async_add_entities):
+from .glow import Glow
+
+async def async_setup_entry(hass: HomeAssistant, config: Dict[str, Any], async_add_entities: Callable) -> bool:
     """Set up the sensor platform."""
     
     new_entities = []
@@ -30,31 +35,33 @@ class GlowConsumptionCurrent(Entity):
         "672b8071-44ff-4f23-bca2-f50c6a3ddd02" # Smart Meter, gas consumption
     ]
 
-    def __init__(self, glow, resource):
+    def __init__(self, glow: Glow, resource: Dict[str, Any]):
         """Initialize the sensor."""
-        self._state = None
+        self._state: Optional[Dict[str, Any]] = None
         self.glow = glow
         self.resource = resource
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str:
         return self.resource['resourceId']
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the name of the sensor."""
         return self.resource['label']
 
     @property
-    def icon(self):
+    def icon(self) -> Optional[str]:
         """Icon to use in the frontend, if any."""
         if self.resource['dataSourceResourceTypeInfo']['type'] == 'ELEC':
             return "mdi:flash"
         elif self.resource['dataSourceResourceTypeInfo']['type'] == 'GAS':
             return "mdi:fire"
+        else:
+            return None
 
     @property
-    def device_info(self):
+    def device_info(self) -> Optional[Dict[str, Any]]:
         if self.resource['dataSourceResourceTypeInfo']['type'] == 'ELEC':
             human_type = 'electricity'
         elif self.resource['dataSourceResourceTypeInfo']['type'] == 'GAS':
@@ -68,7 +75,7 @@ class GlowConsumptionCurrent(Entity):
         }
 
     @property
-    def state(self):
+    def state(self) -> Optional[str]:
         """Return the state of the sensor."""
         if self._state:
             return self._state['data'][0][1]
@@ -76,18 +83,18 @@ class GlowConsumptionCurrent(Entity):
             return None
 
     @property
-    def device_class(self):
+    def device_class(self) -> str:
         return DEVICE_CLASS_POWER
     
     @property
-    def unit_of_measurement(self):
+    def unit_of_measurement(self) -> Optional[str]:
         """Return the unit of measurement."""
-        if not self._state:
-            return None
-        elif self._state['units'] == "W":
+        if self._state is not None and self._state['units'] == "W":
             return POWER_WATT
+        else:
+            return None
 
-    async def async_update(self):
+    async def async_update(self) -> None:
         """Fetch new state data for the sensor.
 
         This is the only method that should fetch new data for Home Assistant.
