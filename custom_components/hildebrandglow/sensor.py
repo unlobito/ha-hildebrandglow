@@ -1,25 +1,48 @@
 """Platform for sensor integration."""
 from typing import Any, Callable, Dict, Optional
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import DEVICE_CLASS_POWER, POWER_WATT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 
+from .config_flow import config_object
 from .const import DOMAIN
-from .glow import Glow
+from .glow import Glow, InvalidAuth
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config: Dict[str, Any], async_add_entities: Callable
+    hass: HomeAssistant, config: ConfigEntry, async_add_entities: Callable
 ) -> bool:
     """Set up the sensor platform."""
     new_entities = []
 
+    async def handle_failed_auth(config: ConfigEntry, hass: HomeAssistant) -> None:
+        glow_auth = await hass.async_add_executor_job(
+            Glow.authenticate,
+            config.data["app_id"],
+            config.data["username"],
+            config.data["password"],
+        )
+
+        new_config = config_object(config.data, glow_auth)
+        hass.config_entries.async_update_entry(entry=config, data=new_config)
+
+        glow = Glow(config.data["app_id"], glow_auth["token"])
+        hass.data[DOMAIN][config.entry_id] = glow
+
     for entry in hass.data[DOMAIN]:
         glow = hass.data[DOMAIN][entry]
 
-        resources = await glow.retrieve_resources()
+        resources = dict()
 
+        try:
+            resources = await hass.async_add_executor_job(glow.retrieve_resources)
+        except InvalidAuth:
+            await handle_failed_auth(config, hass)
+
+            glow = hass.data[DOMAIN][entry]
+            resources = await hass.async_add_executor_job(glow.retrieve_resources)
         for resource in resources:
             if resource["resourceTypeId"] in GlowConsumptionCurrent.resourceTypeId:
                 sensor = GlowConsumptionCurrent(glow, resource)
@@ -32,6 +55,8 @@ async def async_setup_entry(
 
 class GlowConsumptionCurrent(Entity):
     """Sensor object for the Glowmarkt resource's current consumption."""
+
+    hass: HomeAssistant
 
     resourceTypeId = [
         "ea02304a-2820-4ea0-8399-f1d1b430c3a0",  # Smart Meter, electricity consumption
@@ -103,4 +128,11 @@ class GlowConsumptionCurrent(Entity):
 
         This is the only method that should fetch new data for Home Assistant.
         """
-        self._state = await self.glow.current_usage(self.resource["resourceId"])
+
+        try:
+            self._state = await self.hass.async_add_executor_job(
+                self.glow.current_usage, self.resource["resourceId"]
+            )
+        except InvalidAuth:
+            # TODO: Trip the failed auth logic above somehow
+            pass
