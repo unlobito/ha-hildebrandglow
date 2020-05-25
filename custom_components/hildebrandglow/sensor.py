@@ -13,7 +13,6 @@ async def async_setup_entry(
     hass: HomeAssistant, config: Dict[str, Any], async_add_entities: Callable
 ) -> bool:
     """Set up the sensor platform."""
-
     new_entities = []
 
     for entry in hass.data[DOMAIN]:
@@ -32,6 +31,8 @@ async def async_setup_entry(
 
 
 class GlowConsumptionCurrent(Entity):
+    """Sensor object for the Glowmarkt resource's current consumption."""
+
     resourceTypeId = [
         "ea02304a-2820-4ea0-8399-f1d1b430c3a0",  # Smart Meter, electricity consumption
         "672b8071-44ff-4f23-bca2-f50c6a3ddd02",  # Smart Meter, gas consumption
@@ -45,6 +46,7 @@ class GlowConsumptionCurrent(Entity):
 
     @property
     def unique_id(self) -> str:
+        """Return a unique identifier string for the sensor."""
         return self.resource["resourceId"]
 
     @property
@@ -64,6 +66,7 @@ class GlowConsumptionCurrent(Entity):
 
     @property
     def device_info(self) -> Optional[Dict[str, Any]]:
+        """Return information about the sensor data source."""
         if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
             human_type = "electricity"
         elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
@@ -84,6 +87,7 @@ class GlowConsumptionCurrent(Entity):
 
     @property
     def device_class(self) -> str:
+        """Return the device class (always DEVICE_CLASS_POWER)."""
         return DEVICE_CLASS_POWER
 
     @property

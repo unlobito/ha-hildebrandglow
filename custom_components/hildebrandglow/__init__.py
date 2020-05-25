@@ -3,7 +3,6 @@ import asyncio
 from typing import Any, Dict
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -24,7 +23,6 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hildebrand Glow from a config entry."""
-
     glow = Glow(entry.data["app_id"], entry.data["token"])
     hass.data[DOMAIN][entry.entry_id] = glow
 

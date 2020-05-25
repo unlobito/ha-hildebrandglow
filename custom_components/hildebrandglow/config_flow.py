@@ -1,9 +1,8 @@
-"""Config flow for Octopus Energy integration."""
+"""Config flow for Hildebrand Glow integration."""
 import logging
 from typing import Any, Dict
 
 import voluptuous as vol
-
 from homeassistant import config_entries, core
 
 from .const import DOMAIN  # pylint:disable=unused-import
@@ -19,7 +18,6 @@ async def validate_input(hass: core.HomeAssistant, data: dict) -> Dict[str, Any]
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-
     glow = await Glow.authenticate(data["app_id"], data["username"], data["password"])
 
     # Return some info we want to store in the config entry.
@@ -34,7 +32,7 @@ async def validate_input(hass: core.HomeAssistant, data: dict) -> Dict[str, Any]
 
 
 class DomainConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Octopus Energy."""
+    """Handle a config flow for Hildebrand Glow."""
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.SOURCE_USER
