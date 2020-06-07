@@ -34,7 +34,7 @@ async def async_setup_entry(
     for entry in hass.data[DOMAIN]:
         glow = hass.data[DOMAIN][entry]
 
-        resources = dict()
+        resources: dict = dict()
 
         try:
             resources = await hass.async_add_executor_job(glow.retrieve_resources)
@@ -128,7 +128,6 @@ class GlowConsumptionCurrent(Entity):
 
         This is the only method that should fetch new data for Home Assistant.
         """
-
         try:
             self._state = await self.hass.async_add_executor_job(
                 self.glow.current_usage, self.resource["resourceId"]

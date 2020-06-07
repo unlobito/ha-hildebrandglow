@@ -14,7 +14,7 @@ DATA_SCHEMA = vol.Schema({"app_id": str, "username": str, "password": str})
 
 
 def config_object(data: dict, glow: Dict[str, Any]) -> Dict[str, Any]:
-    """Prepare a ConfigEntity with authentication data and a temporary token"""
+    """Prepare a ConfigEntity with authentication data and a temporary token."""
     return {
         "name": glow["name"],
         "app_id": data["app_id"],
