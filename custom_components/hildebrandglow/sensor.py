@@ -25,7 +25,8 @@ async def async_setup_entry(
             config.data["password"],
         )
 
-        new_config = config_object(config.data, glow_auth)
+        current_config = dict(config.data.copy())
+        new_config = config_object(current_config, glow_auth)
         hass.config_entries.async_update_entry(entry=config, data=new_config)
 
         glow = Glow(config.data["app_id"], glow_auth["token"])
