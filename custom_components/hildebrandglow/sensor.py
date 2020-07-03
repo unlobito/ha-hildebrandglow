@@ -40,7 +40,10 @@ async def async_setup_entry(
         try:
             resources = await hass.async_add_executor_job(glow.retrieve_resources)
         except InvalidAuth:
-            await handle_failed_auth(config, hass)
+            try:
+                await handle_failed_auth(config, hass)
+            except InvalidAuth:
+                return False
 
             glow = hass.data[DOMAIN][entry]
             resources = await hass.async_add_executor_job(glow.retrieve_resources)
@@ -63,6 +66,8 @@ class GlowConsumptionCurrent(Entity):
         "ea02304a-2820-4ea0-8399-f1d1b430c3a0",  # Smart Meter, electricity consumption
         "672b8071-44ff-4f23-bca2-f50c6a3ddd02",  # Smart Meter, gas consumption
     ]
+
+    available = True
 
     def __init__(self, glow: Glow, resource: Dict[str, Any]):
         """Initialize the sensor."""
@@ -135,4 +140,5 @@ class GlowConsumptionCurrent(Entity):
             )
         except InvalidAuth:
             # TODO: Trip the failed auth logic above somehow
+            self.available = False
             pass
