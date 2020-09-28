@@ -104,7 +104,7 @@ class GlowConsumptionCurrent(Entity):
             human_type = "gas"
 
         return {
-            "identifiers": {(DOMAIN, self.resource["dataSourceUnitInfo"]["shid"])},
+            "identifiers": {(DOMAIN, self.resource["resourceId"])},
             "name": f"Smart Meter, {human_type}",
         }
 
