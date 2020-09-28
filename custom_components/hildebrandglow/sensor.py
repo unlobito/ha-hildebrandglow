@@ -52,7 +52,7 @@ async def async_setup_entry(
                 sensor = GlowConsumptionCurrent(glow, resource)
                 new_entities.append(sensor)
 
-    async_add_entities([sensor])
+        async_add_entities(new_entities)
 
     return True
 
