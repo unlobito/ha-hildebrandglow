@@ -62,10 +62,7 @@ class GlowConsumptionCurrent(Entity):
 
     hass: HomeAssistant
 
-    knownClassifiers = [
-        "gas.consumption",
-        "electricity.consumption"
-    ]
+    knownClassifiers = ["gas.consumption", "electricity.consumption"]
 
     available = True
 
