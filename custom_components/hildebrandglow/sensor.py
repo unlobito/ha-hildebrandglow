@@ -102,7 +102,7 @@ class GlowConsumptionCurrent(Entity):
     def update_state(self, meter: MQTTPayload) -> None:
         """Receive an MQTT update from Glow and update the internal state."""
         self._state = meter.electricity
-        self.async_write_ha_state()
+        self.hass.add_job(self.async_write_ha_state)
 
     @property
     def device_class(self) -> str:
