@@ -97,9 +97,12 @@ class Glow:
             {},
         )
 
-        self.hardwareId = cad["hardwareId"]
+        if "hardwareId" in cad:
+            self.hardwareId = cad["hardwareId"]
 
-        return self.hardwareId
+            return self.hardwareId
+        else:
+            raise NoCADAvailable
 
     def connect_mqtt(self) -> None:
         """Connect the internal MQTT client to the discovered CAD."""
@@ -178,3 +181,7 @@ class CannotConnect(exceptions.HomeAssistantError):
 
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+class NoCADAvailable(exceptions.HomeAssistantError):
+    """Error to indicate no CADs were found."""

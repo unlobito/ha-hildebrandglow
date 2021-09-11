@@ -1,5 +1,6 @@
 """The Hildebrand Glow integration."""
 import asyncio
+import logging
 from typing import Any, Dict
 
 import voluptuous as vol
@@ -7,7 +8,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import APP_ID, DOMAIN
-from .glow import Glow, InvalidAuth
+from .glow import Glow, InvalidAuth, NoCADAvailable
+
+_LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
@@ -34,6 +37,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             continue
 
     except InvalidAuth:
+        _LOGGER.error("Couldn't login with the provided username/password.")
+
+        return False
+
+    except NoCADAvailable:
+        _LOGGER.error("Couldn't find any CAD devices (e.g. Glow Stick)")
+
         return False
 
     hass.data[DOMAIN][entry.entry_id] = glow
