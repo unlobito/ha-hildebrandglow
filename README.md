@@ -1,7 +1,7 @@
 # ha-hildebrandglow
 HomeAssistant integration for the [Hildebrand Glow](https://www.hildebrand.co.uk/our-products/) smart meter HAN for UK SMETS meters.
 
-Before using this integration, you'll need to have an active Glow account (usable through the Bright app) and API access enabled. If you haven't been given an API Application ID by Hildebrand, you'll need to contact them and request API access be enabled for your account.
+You'll need to have an active Glow account (usable through the Bright app), [a Consumer Access Device](https://www.hildebrand.co.uk/our-products/), and MQTT access enabled before using this integration. If you haven't been given MQTT connection details by Hildebrand, you'll need to contact them and request MQTT access be enabled for your account.
 
 This integration will currently emit one sensor for the current usage of each detected smart meter.
 
