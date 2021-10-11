@@ -1,6 +1,7 @@
 """Helper classes for Zigbee Smart Energy Profile data."""
 import json
 from enum import Enum
+import struct
 from typing import Any, Dict, Optional
 
 
@@ -158,7 +159,7 @@ class Meter:
             )
 
             self.instantaneous_demand = (
-                int(historical_consumption["00"], 16)
+                self._hex_twos_complement_to_decimal(historical_consumption["00"])
                 if "00" in historical_consumption
                 else None
             )
@@ -177,6 +178,10 @@ class Meter:
                 if "40" in historical_consumption
                 else None
             )
+
+        def _hex_twos_complement_to_decimal(hex_value: str) -> int:
+            """Simple function to perform signed 2's complement conversion"""
+            return int(struct.unpack(">i", bytes.fromhex(hex_value))[0])
 
     class AlternativeHistoricalConsumption:
         """Information about the meter's altenative historical readings."""
