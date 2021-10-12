@@ -1,7 +1,7 @@
 """Helper classes for Zigbee Smart Energy Profile data."""
 import json
-from enum import Enum
 import struct
+from enum import Enum
 from typing import Any, Dict, Optional
 
 
@@ -179,7 +179,7 @@ class Meter:
                 else None
             )
 
-        def _hex_twos_complement_to_decimal(hex_value: str) -> int:
+        def _hex_twos_complement_to_decimal(self, hex_value: str) -> int:
             """Simple function to perform signed 2's complement conversion"""
             return int(struct.unpack(">i", bytes.fromhex(hex_value))[0])
 
