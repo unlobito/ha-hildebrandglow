@@ -180,7 +180,7 @@ class Meter:
             )
 
         def _hex_twos_complement_to_decimal(self, hex_value: str) -> int:
-            """Simple function to perform signed 2's complement conversion"""
+            """Perform signed 2's complement conversion."""
             return int(struct.unpack(">i", bytes.fromhex(hex_value))[0])
 
     class AlternativeHistoricalConsumption:
