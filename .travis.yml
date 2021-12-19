@@ -1,6 +1,6 @@
 language: python
 python:
-  - "3.8"
+  - "3.9"
 install:
   # Attempt to work around Home Assistant not being declared through PEP 561
   # Details: https://github.com/home-assistant/core/pull/28866#pullrequestreview-319309922

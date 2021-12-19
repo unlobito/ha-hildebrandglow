@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pprint import pprint
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import paho.mqtt.client as mqtt
 import requests
@@ -10,8 +10,7 @@ from homeassistant import exceptions
 
 from .mqttpayload import MQTTPayload
 
-if TYPE_CHECKING:
-    from .sensor import GlowConsumptionCurrent
+from .glowdata import SmartMeter  # isort:skip
 
 
 class Glow:
@@ -29,7 +28,9 @@ class Glow:
     hardwareId: str
     broker: mqtt.Client
 
-    sensors: Dict[str, GlowConsumptionCurrent] = {}
+    data: SmartMeter = SmartMeter(None, None, None)
+
+    callbacks: List[Callable] = []
 
     def __init__(self, app_id: str, username: str, password: str):
         """Create an authenticated Glow object."""
@@ -110,6 +111,10 @@ class Glow:
 
         self.broker.loop_start()
 
+    async def disconnect(self) -> None:
+        """Disconnect the internal MQTT client."""
+        return self.broker.loop_stop()
+
     def _cb_on_connect(
         self, client: mqtt, userdata: Any, flags: Dict[str, Any], rc: int
     ) -> None:
@@ -129,12 +134,10 @@ class Glow:
     ) -> None:
         """Receive a PUBLISH message from the server."""
         payload = MQTTPayload(msg.payload)
+        self.data = SmartMeter.from_mqtt_payload(payload)
 
-        if "electricity.consumption" in self.sensors:
-            self.sensors["electricity.consumption"].update_state(payload)
-
-        if "gas.consumption" in self.sensors:
-            self.sensors["gas.consumption"].update_state(payload)
+        for callback in self.callbacks:
+            callback(payload)
 
     def retrieve_resources(self) -> List[Dict[str, Any]]:
         """Retrieve the resources known to Glowmarkt for the authenticated user."""
@@ -168,11 +171,9 @@ class Glow:
         data = response.json()
         return data
 
-    def register_sensor(
-        self, sensor: GlowConsumptionCurrent, resource: Dict[str, Any]
-    ) -> None:
+    def register_on_message_callback(self, callback: Callable) -> None:
         """Register a live sensor for dispatching MQTT messages."""
-        self.sensors[resource["classifier"]] = sensor
+        self.callbacks.append(callback)
 
 
 class CannotConnect(exceptions.HomeAssistantError):

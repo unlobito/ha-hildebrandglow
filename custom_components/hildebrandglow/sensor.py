@@ -1,121 +1,109 @@
 """Platform for sensor integration."""
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.sensor import (
+    STATE_CLASS_MEASUREMENT,
+    STATE_CLASS_TOTAL_INCREASING,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import DEVICE_CLASS_POWER, POWER_WATT, VOLUME_CUBIC_METERS
+from homeassistant.const import (
+    DEVICE_CLASS_ENERGY,
+    DEVICE_CLASS_GAS,
+    DEVICE_CLASS_POWER,
+    ENERGY_KILO_WATT_HOUR,
+    POWER_WATT,
+    VOLUME_CUBIC_METERS,
+)
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.typing import StateType
 
-from .const import DOMAIN
-from .glow import Glow, InvalidAuth
-from .mqttpayload import Meter, MQTTPayload
+from .const import DOMAIN, GLOW_SESSION
+from .glow import Glow
+
+SENSORS: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(
+        key="gas_consumption",
+        name="Gas Consumption",
+        entity_registry_enabled_default=False,
+        native_unit_of_measurement=VOLUME_CUBIC_METERS,
+        device_class=DEVICE_CLASS_GAS,
+        state_class=STATE_CLASS_TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="power_consumption",
+        name="Power Consumption",
+        native_unit_of_measurement=POWER_WATT,
+        device_class=DEVICE_CLASS_POWER,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="energy_consumption",
+        name="Energy Consumption",
+        native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
+        device_class=DEVICE_CLASS_ENERGY,
+        state_class=STATE_CLASS_TOTAL_INCREASING,
+    ),
+)
 
 
 async def async_setup_entry(
     hass: HomeAssistant, config: ConfigEntry, async_add_entities: Callable
-) -> bool:
+) -> None:
     """Set up the sensor platform."""
-    new_entities = []
-
-    for entry in hass.data[DOMAIN]:
-        glow = hass.data[DOMAIN][entry]
-
-        resources: dict = {}
-
-        try:
-            resources = await hass.async_add_executor_job(glow.retrieve_resources)
-        except InvalidAuth:
-            return False
-
-        for resource in resources:
-            if resource["classifier"] in GlowConsumptionCurrent.knownClassifiers:
-                sensor = GlowConsumptionCurrent(glow, resource)
-                glow.register_sensor(sensor, resource)
-                new_entities.append(sensor)
-
-        async_add_entities(new_entities)
-
-    return True
+    async_add_entities(
+        GlowSensorEntity(
+            glow=hass.data[DOMAIN][config.entry_id][GLOW_SESSION],
+            description=description,
+        )
+        for description in SENSORS
+    )
 
 
-class GlowConsumptionCurrent(Entity):
+class GlowSensorEntity(SensorEntity):
     """Sensor object for the Glowmarkt resource's current consumption."""
 
-    hass: HomeAssistant
-
-    knownClassifiers = ["gas.consumption", "electricity.consumption"]
-
-    _state: Optional[Meter]
-    available = True
     should_poll = False
 
-    def __init__(self, glow: Glow, resource: Dict[str, Any]):
+    glow: Glow
+
+    def __init__(
+        self,
+        *,
+        glow: Glow,
+        description: SensorEntityDescription,
+    ) -> None:
         """Initialize the sensor."""
-        self._state = None
+        super().__init__()
         self.glow = glow
-        self.resource = resource
 
-    @property
-    def unique_id(self) -> str:
-        """Return a unique identifier string for the sensor."""
-        return self.resource["resourceId"]
+        self.entity_id = f"{SENSOR_DOMAIN}.glow{glow.hardwareId}_{description.key}"
+        self.entity_description = description
+        self._attr_unique_id = f"glow{glow.hardwareId}_{description.key}"
 
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self.resource["label"]
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, f"glow{glow.hardwareId}")},
+            manufacturer="Hildebrand",
+            name="Smart Meter",
+        )
 
-    @property
-    def icon(self) -> Optional[str]:
-        """Icon to use in the frontend, if any."""
-        if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
-            return "mdi:flash"
-        elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
-            return "mdi:fire"
-        else:
-            return None
+    async def async_added_to_hass(self) -> None:
+        """Register callback function."""
+        self.glow.register_on_message_callback(self.on_message)
 
-    @property
-    def device_info(self) -> Optional[DeviceInfo]:
-        """Return information about the sensor data source."""
-        if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
-            human_type = "electricity"
-        elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
-            human_type = "gas"
-
-        return {
-            "identifiers": {(DOMAIN, self.resource["resourceId"])},
-            "name": f"Smart Meter, {human_type}",
-        }
-
-    @property
-    def state(self) -> Optional[int]:
-        """Return the state of the sensor."""
-        if self._state:
-            if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
-                return self._state.historical_consumption.instantaneous_demand
-            elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
-                alt = self._state.alternative_historical_consumption
-                return alt.current_day_consumption_delivered
-        return None
-
-    def update_state(self, meter: MQTTPayload) -> None:
-        """Receive an MQTT update from Glow and update the internal state."""
-        self._state = meter.electricity
+    def on_message(self, message: Any) -> None:
+        """Receive callback for incoming MQTT payloads."""
         self.hass.add_job(self.async_write_ha_state)
 
     @property
-    def device_class(self) -> str:
-        """Return the device class (always DEVICE_CLASS_POWER)."""
-        return DEVICE_CLASS_POWER
-
-    @property
-    def unit_of_measurement(self) -> Optional[str]:
-        """Return the unit of measurement."""
-        if self._state is not None:
-            if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
-                return POWER_WATT
-            elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
-                return VOLUME_CUBIC_METERS
-
-        return None
+    def native_value(self) -> StateType:
+        """Return the state of the sensor."""
+        value = getattr(self.glow.data, self.entity_description.key)
+        if isinstance(value, str):
+            return value.lower()
+        return value

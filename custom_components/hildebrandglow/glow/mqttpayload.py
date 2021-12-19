@@ -93,10 +93,10 @@ class Meter:
         unit_of_measure: Optional[UnitofMeasure]
         """Unit for the measured value."""
 
-        multiplier: Optional[int]
+        multiplier: int
         """Multiplier value for smart meter readings."""
 
-        divisor: Optional[int]
+        divisor: int
         """Divisor value for smart meter readings."""
 
         summation_formatting: Optional[str]
@@ -122,8 +122,8 @@ class Meter:
             formatting = payload["0702"]["03"] if "03" in payload["0702"] else {}
 
             self.unit_of_measure = self.UnitofMeasure(formatting.get("00", "00"))
-            self.multiplier = int(formatting["01"], 16) if "01" in formatting else None
-            self.divisor = int(formatting["02"], 16) if "02" in formatting else None
+            self.multiplier = int(formatting["01"], 16) if "01" in formatting else 1
+            self.divisor = int(formatting["02"], 16) if "02" in formatting else 1
             self.summation_formatting = formatting.get("03")
             self.demand_formatting = formatting.get("04")
             self.metering_device_type = (
