@@ -29,7 +29,6 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="gas_consumption",
         name="Gas Consumption",
-        entity_registry_enabled_default=False,
         native_unit_of_measurement=VOLUME_CUBIC_METERS,
         device_class=DEVICE_CLASS_GAS,
         state_class=STATE_CLASS_TOTAL_INCREASING,
@@ -99,6 +98,11 @@ class GlowSensorEntity(SensorEntity):
     def on_message(self, message: Any) -> None:
         """Receive callback for incoming MQTT payloads."""
         self.hass.add_job(self.async_write_ha_state)
+
+    @property
+    def available(self) -> bool:
+        """Return the sensor's availability."""
+        return getattr(self.glow.data, self.entity_description.key) is not None
 
     @property
     def native_value(self) -> StateType:
