@@ -3,12 +3,12 @@
   "name": "Hildebrand Glow",
   "config_flow": true,
   "documentation": "https://github.com/unlobito/ha-hildebrandglow",
-  "requirements": ["requests"],
+  "requirements": ["requests", "paho-mqtt"],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
   "dependencies": [],
-  "codeowners": [
-    "@unlobito"
-  ]
+  "codeowners": ["@unlobito"],
+  "iot_class": "cloud_polling",
+  "version": "0.1.1"
 }

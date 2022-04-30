@@ -1,141 +1,113 @@
 """Platform for sensor integration."""
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.sensor import (
+    STATE_CLASS_MEASUREMENT,
+    STATE_CLASS_TOTAL_INCREASING,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import DEVICE_CLASS_POWER, POWER_WATT
+from homeassistant.const import (
+    DEVICE_CLASS_ENERGY,
+    DEVICE_CLASS_GAS,
+    DEVICE_CLASS_POWER,
+    ENERGY_KILO_WATT_HOUR,
+    POWER_WATT,
+    VOLUME_CUBIC_METERS,
+)
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.typing import StateType
 
-from .config_flow import config_object
-from .const import DOMAIN
-from .glow import Glow, InvalidAuth
+from .const import DOMAIN, GLOW_SESSION
+from .glow import Glow
+
+SENSORS: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(
+        key="gas_consumption",
+        name="Gas Consumption",
+        native_unit_of_measurement=VOLUME_CUBIC_METERS,
+        device_class=DEVICE_CLASS_GAS,
+        state_class=STATE_CLASS_TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="power_consumption",
+        name="Power Consumption",
+        native_unit_of_measurement=POWER_WATT,
+        device_class=DEVICE_CLASS_POWER,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="energy_consumption",
+        name="Energy Consumption",
+        native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
+        device_class=DEVICE_CLASS_ENERGY,
+        state_class=STATE_CLASS_TOTAL_INCREASING,
+    ),
+)
 
 
 async def async_setup_entry(
     hass: HomeAssistant, config: ConfigEntry, async_add_entities: Callable
-) -> bool:
+) -> None:
     """Set up the sensor platform."""
-    new_entities = []
-
-    async def handle_failed_auth(config: ConfigEntry, hass: HomeAssistant) -> None:
-        glow_auth = await hass.async_add_executor_job(
-            Glow.authenticate,
-            config.data["app_id"],
-            config.data["username"],
-            config.data["password"],
+    async_add_entities(
+        GlowSensorEntity(
+            glow=hass.data[DOMAIN][config.entry_id][GLOW_SESSION],
+            description=description,
         )
-
-        current_config = dict(config.data.copy())
-        new_config = config_object(current_config, glow_auth)
-        hass.config_entries.async_update_entry(entry=config, data=new_config)
-
-        glow = Glow(config.data["app_id"], glow_auth["token"])
-        hass.data[DOMAIN][config.entry_id] = glow
-
-    for entry in hass.data[DOMAIN]:
-        glow = hass.data[DOMAIN][entry]
-
-        resources: dict = {}
-
-        try:
-            resources = await hass.async_add_executor_job(glow.retrieve_resources)
-        except InvalidAuth:
-            try:
-                await handle_failed_auth(config, hass)
-            except InvalidAuth:
-                return False
-
-            glow = hass.data[DOMAIN][entry]
-            resources = await hass.async_add_executor_job(glow.retrieve_resources)
-        for resource in resources:
-            if resource["classifier"] in GlowConsumptionCurrent.knownClassifiers:
-                sensor = GlowConsumptionCurrent(glow, resource)
-                new_entities.append(sensor)
-
-        async_add_entities(new_entities)
-
-    return True
+        for description in SENSORS
+    )
 
 
-class GlowConsumptionCurrent(Entity):
+class GlowSensorEntity(SensorEntity):
     """Sensor object for the Glowmarkt resource's current consumption."""
 
-    hass: HomeAssistant
+    should_poll = False
 
-    knownClassifiers = ["gas.consumption", "electricity.consumption"]
+    glow: Glow
 
-    available = True
-
-    def __init__(self, glow: Glow, resource: Dict[str, Any]):
+    def __init__(
+        self,
+        *,
+        glow: Glow,
+        description: SensorEntityDescription,
+    ) -> None:
         """Initialize the sensor."""
-        self._state: Optional[Dict[str, Any]] = None
+        super().__init__()
         self.glow = glow
-        self.resource = resource
+
+        self.entity_id = f"{SENSOR_DOMAIN}.glow{glow.hardwareId}_{description.key}"
+        self.entity_description = description
+        self._attr_unique_id = f"glow{glow.hardwareId}_{description.key}"
+
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, f"glow{glow.hardwareId}")},
+            manufacturer="Hildebrand",
+            name="Smart Meter",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Register callback function."""
+        self.glow.register_on_message_callback(self.on_message)
+
+    def on_message(self, message: Any) -> None:
+        """Receive callback for incoming MQTT payloads."""
+        self.hass.add_job(self.async_write_ha_state)
 
     @property
-    def unique_id(self) -> str:
-        """Return a unique identifier string for the sensor."""
-        return self.resource["resourceId"]
+    def available(self) -> bool:
+        """Return the sensor's availability."""
+        return getattr(self.glow.data, self.entity_description.key) is not None
 
     @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self.resource["label"]
-
-    @property
-    def icon(self) -> Optional[str]:
-        """Icon to use in the frontend, if any."""
-        if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
-            return "mdi:flash"
-        elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
-            return "mdi:fire"
-        else:
-            return None
-
-    @property
-    def device_info(self) -> Optional[Dict[str, Any]]:
-        """Return information about the sensor data source."""
-        if self.resource["dataSourceResourceTypeInfo"]["type"] == "ELEC":
-            human_type = "electricity"
-        elif self.resource["dataSourceResourceTypeInfo"]["type"] == "GAS":
-            human_type = "gas"
-
-        return {
-            "identifiers": {(DOMAIN, self.resource["resourceId"])},
-            "name": f"Smart Meter, {human_type}",
-        }
-
-    @property
-    def state(self) -> Optional[str]:
+    def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        if self._state:
-            return self._state["data"][0][1]
-        else:
-            return None
-
-    @property
-    def device_class(self) -> str:
-        """Return the device class (always DEVICE_CLASS_POWER)."""
-        return DEVICE_CLASS_POWER
-
-    @property
-    def unit_of_measurement(self) -> Optional[str]:
-        """Return the unit of measurement."""
-        if self._state is not None and self._state["units"] == "W":
-            return POWER_WATT
-        else:
-            return None
-
-    async def async_update(self) -> None:
-        """Fetch new state data for the sensor.
-
-        This is the only method that should fetch new data for Home Assistant.
-        """
-        try:
-            self._state = await self.hass.async_add_executor_job(
-                self.glow.current_usage, self.resource["resourceId"]
-            )
-        except InvalidAuth:
-            # TODO: Trip the failed auth logic above somehow
-            self.available = False
-            pass
+        value = getattr(self.glow.data, self.entity_description.key)
+        if isinstance(value, str):
+            return value.lower()
+        return value
