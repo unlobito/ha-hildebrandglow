@@ -1,4 +1,10 @@
+# Archived
+This repository was archived on 30 April 2022 (see https://github.com/unlobito/ha-hildebrandglow/discussions/55 for details).
+
+[HandyHat/ha-hildebrandglow-dcc](https://github.com/HandyHat/ha-hildebrandglow-dcc) is maintained as a fork for DCC users.
+
 # ha-hildebrandglow
+
 HomeAssistant integration for the [Hildebrand Glow](https://www.hildebrand.co.uk/our-products/) smart meter HAN for UK SMETS meters.
 
 You'll need to have an active Glow account (usable through the Bright app), [a Consumer Access Device](https://www.hildebrand.co.uk/our-products/), and MQTT access enabled before using this integration. If you haven't been given MQTT connection details by Hildebrand, you'll need to contact them and request MQTT access be enabled for your account.
